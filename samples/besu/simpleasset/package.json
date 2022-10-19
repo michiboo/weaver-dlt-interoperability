@@ -28,11 +28,12 @@
   ],
   "homepage": "https://github.com/hyperledger-labs/weaver-dlt-interoperability/samples/besu/simpleasset",
   "dependencies": {
+    "@hyperledger-labs/weaver-protos-js": "^1.5.2",
+    "@openzeppelin/contracts": "^4.3.2",
     "@truffle/contract": "^4.2.14",
     "chai": "^4.3.4",
     "dotenv": "latest",
     "ganache-cli": "^6.12.2",
-    "@openzeppelin/contracts": "^4.3.2",
     "solc": "^0.8.8"
   },
   "devDependencies": {
