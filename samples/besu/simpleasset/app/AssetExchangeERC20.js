@@ -55,7 +55,7 @@ async function init(provider1, provider2, contractOwner1, contractOwner2, Alice1
 	// number of token being exchanged is issued to Alice and Bob to 
 	// ensure that the exchange in this test application does not fail 
 	// due to insufficient funds.
-	await AliceERC20.transferFrom(contractOwner1, Alice1, 1, {from: contractOwner1}).catch(function (e) {
+	await AliceERC20.transfer(Alice1, senderInitialBalance, {from: contractOwner1}).catch(function (e) {
 		console.log("AliceERC20 transfer threw an error; Probably the token supply is used up!");
 	})
 	await BobERC20.transfer(Bob2, senderInitialBalance, {from: contractOwner2}).catch(function () {
