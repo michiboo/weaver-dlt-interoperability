@@ -121,5 +121,30 @@ console.log("final :", Buffer.from(res.hash?.getPreimage()).toString('hex'))
 await assetManager.claimAssetInHTLC(lockContractId1, interopContract1, Bob1, res.hash?.getPreimage())
 console.log("\n Balances after claim Network:")
 await getBalances(Alice1, Bob1, Alice2, Bob2)
+console.log("\n test unlock")
+var res1 = await assetManager.createHTLC(
+    interopContract1,
+    AliceERC20,
+    "1",
+    "1",
+    1,
+    Alice1,
+    Bob1,
+    Math.floor(Date.now() / 1000) + 5
+)
+await getBalances(Alice1, Bob1, Alice2, Bob2)
+let lockContractId2 = res1.result.logs[0].args.lockContractId
+function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
+const lockStatus = await assetManager.isAssetLockedInHTLC(lockContractId2, interopContract1);
+if (lockStatus !== true) throw new Error("asset not locked")
+await delay(6000)
+
+await assetManager.HTLCAssetUnlock(interopContract1,lockContractId2, Alice1)
+
+console.log("--------------------unlocking---------------------")
+await getBalances(Alice1, Bob1, Alice2, Bob2)
 }
 main()

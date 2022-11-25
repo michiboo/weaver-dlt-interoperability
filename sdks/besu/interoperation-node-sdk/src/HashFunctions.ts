@@ -48,7 +48,6 @@ abstract class SHA implements Hash {
     }
     getSerializedPreimageBase64(): any {
         return Buffer.from(this.preimage)
-        // .toString('base64')
     }
     
     setSerializedHashBase64(hash64: any) {

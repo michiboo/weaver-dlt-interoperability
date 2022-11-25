@@ -128,9 +128,48 @@ const claimAssetInHTLC = async (
     return claimStatus;
 };
 
+const isAssetLockedInHTLC = async (
+    lockContractId: string,
+    assetManagerContract: any,
+): Promise<any> => {
+
+    if (!assetManagerContract) {
+        console.log("Contract not supplied");
+        return false;
+    }
+    
+    // Normal invoke function
+    var lockStatus = await assetManagerContract.isAssetLocked(lockContractId).catch(function (e: any) {
+        console.log(e)
+        console.log("isAssetLock threw an error");
+        lockStatus = false
+    })
+
+    return lockStatus;
+};
+
+
+const HTLCAssetUnlock = async (
+    interopContract: any,
+    lockContractId: string,
+    sender: string,
+): Promise<void> => {
+    var unlockStatus = await interopContract.unlockAsset(lockContractId, {
+		from: sender
+	}).catch(function (e: any) {
+        console.log(e)
+		console.log("unlockAsset threw an error");
+		unlockStatus = false
+	})
+
+	return unlockStatus
+}
+
 export {
     createAssetExchangeAgreementSerialized,
     createAssetClaimInfoSerialized,
     createHTLC,
     claimAssetInHTLC,
+    HTLCAssetUnlock,
+    isAssetLockedInHTLC
 };
