@@ -1,6 +1,8 @@
 import { GluegunCommand } from 'gluegun'
 import { getNetworkConfig, commandHelp } from '../../helper/helper'
 import { getContractInstance } from '../../helper/besu-functions'
+import * as assetManager from "@hyperledger-labs/weaver-besu-interop-sdk/src/AssetManager";
+
 const Web3 = require("web3")
 const crypto = require('crypto')
 
@@ -219,24 +221,23 @@ const command: GluegunCommand = {
 			})
 		}
 
-		const lockTx = await interopContract.lockAsset(
-			recipient,
-			tokenContract.address,
-			amount,
-			hash,
-			timeLock,
+		const lockTx = await assetManager.createHTLC(
+			interopContract,
+			tokenContract,
 			options.token_id,
 			Web3.utils.utf8ToHex(options.data),
-			{
-				from: sender
-			}
+			amount,
+			sender,
+			recipient,
+			timeLock
 		).catch(function (e) {
 			console.log(e)
 			console.log("lockAsset threw an error");
 		})
-		const lockContractId = lockTx.logs[0].args.lockContractId
+		if(lockTx){
+		const lockContractId = lockTx.result.logs[0].args.lockContractId
 		console.log(`Lock contract ID: ${lockContractId.toString().substring(2)}`)
-
+		}
 		// Balances of sender and receiver after locking
 		console.log(`Account balances after locking`)
 		var senderBalance = await getBalances(tokenContract, sender, options.token_id, options.asset_type)

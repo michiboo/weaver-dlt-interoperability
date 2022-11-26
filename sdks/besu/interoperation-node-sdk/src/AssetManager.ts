@@ -10,8 +10,6 @@ import assetLocksPb from "@hyperledger-labs/weaver-protos-js/common/asset_locks_
 import Web3 from 'web3';
 import crypto from "crypto";
 import { Hash, SHA256 } from "./HashFunctions";
-var Contract = require('web3-eth-contract');
-const logger = log4js.getLogger("InteroperableHelper");
 
 // Create an asset exchange agreement structure
 function createAssetExchangeAgreementSerialized(assetType: string, assetID: string, recipientECert: string, lockerECert: string) {
@@ -21,6 +19,17 @@ function createAssetExchangeAgreementSerialized(assetType: string, assetID: stri
     assetExchangeAgreement.setRecipient(recipientECert);
     assetExchangeAgreement.setLocker(lockerECert);
     return Buffer.from(assetExchangeAgreement.serializeBinary())
+}
+
+// Create an asset lock structure
+function createAssetLockInfoSerialized(hash: Hash, expiryTimeSecs: number)
+{
+    const lockInfoHTLC = new assetLocksPb.AssetLockHTLC();
+    lockInfoHTLC.setHashmechanism(hash.HASH_MECHANISM);
+    lockInfoHTLC.setHashbase64(Buffer.from(hash.getSerializedPreimageBase64()));
+    lockInfoHTLC.setExpirytimesecs(expiryTimeSecs);
+    lockInfoHTLC.setTimespec(assetLocksPb.AssetLockHTLC.TimeSpec.EPOCH)
+    return Buffer.from(lockInfoHTLC.serializeBinary())
 }
 
 // Create an asset claim structure
@@ -66,11 +75,13 @@ const createHTLC = async (
 
     const preimage = crypto.randomBytes(32) // to sample a preimage for the hash
 	const newHash = crypto.createHash('sha256').update(preimage).digest()
-	
+	const finalHash = new SHA256();
+    finalHash.setPreimage(newHash)
 
     // const web3N1 = new Web3(provider);
     // Contract.setProvider(provider);
     const protobufParams = createAssetExchangeAgreementSerialized("", assetID, recipientAddress.slice(2), assetData);
+    const lockInfoParams = createAssetLockInfoSerialized(finalHash, expiryTimeSecs);
     await tokenContract.approve(tokenContract.address, assetAmount, { from: senderAddress }).catch(function () {
         console.log("Token approval failed!!!");
         return false
@@ -81,8 +92,7 @@ const createHTLC = async (
         protobufParams,
         tokenContract.address,
         assetAmount,
-        newHash,
-        expiryTimeSecs,
+        lockInfoParams,
         Web3.utils.utf8ToHex(assetData),
         {
             from: senderAddress

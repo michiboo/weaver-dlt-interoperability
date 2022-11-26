@@ -57,31 +57,74 @@ contract AssetExchangeContract is ERC1155Holder {
         address indexed receiver,
         bytes32 indexed lockContractId
     );
-    
-    function bytesToAddress(bytes memory bys) public pure returns (address addr) {
+
+    function bytesToAddress(bytes memory bys)
+        public
+        pure
+        returns (address addr)
+    {
         assembly {
-             addr := mload(add(bys,20))
-       }
+            addr := mload(add(bys, 20))
+        }
     }
 
-    function bytesTobytes32(bytes memory bys) public pure returns (bytes32 res) {
+    function bytesTobytes32(bytes memory bys)
+        public
+        pure
+        returns (bytes32 res)
+    {
         assembly {
-             res := mload(add(bys,32))
-       }
+            res := mload(add(bys, 32))
+        }
     }
 
-    function lockAsset(bytes memory rawParams, address assetContract,
+    function retProtoBuf(bytes memory data)
+        public
+        pure
+        returns (
+            bytes32,
+            HashMechanism,
+            uint64
+        )
+    {
+        AssetLockHTLC memory assetInfo;
+        (, , assetInfo) = AssetLockHTLCCodec.decode(
+            0,
+            data,
+            uint64(data.length)
+        );
+        return (
+            bytesTobytes32(assetInfo.hashBase64),
+            assetInfo.hashMechanism,
+            assetInfo.expiryTimeSecs
+        );
+    }
+
+    function lockAsset(
+        bytes memory rawParams,
+        address assetContract,
         uint256 amount,
-        bytes32 hashLock,
-        uint256 expirationTime,
-        bytes memory data) external
-		returns (bytes32 lockContractId){
-		bytes memory rawParamsBytes = rawParams;
-			AssetExchangeAgreement memory params;
-				(, , params) = AssetExchangeAgreementCodec.decode(0, rawParamsBytes, uint64(rawParamsBytes.length));
-		address sender = msg.sender;
+        bytes memory lockinfo,
+        bytes memory data
+    ) external returns (bytes32 lockContractId) {
+        AssetExchangeAgreement memory params;
+        (, , params) = AssetExchangeAgreementCodec.decode(
+            0,
+            rawParams,
+            uint64(rawParams.length)
+        );
+        AssetLockHTLC memory assetInfo;
+        (, , assetInfo) = AssetLockHTLCCodec.decode(
+            0,
+            lockinfo,
+            uint64(lockinfo.length)
+        );
+        HashMechanism hashMechanism = assetInfo.hashMechanism;
+        bytes32 hashLock = bytesTobytes32(assetInfo.hashBase64);
+        uint256 expirationTime = assetInfo.expiryTimeSecs;
+        address sender = msg.sender;
         uint256 tokenId = abi.decode(abi.encode(params.id), (uint256));
-		// Checking the validity of the input parameters
+        // Checking the validity of the input parameters
         require(amount > 0, "Amount should be greater than zero");
         transferStruct.Info memory transInfo = transferStruct.Info({
             sender: sender,
@@ -100,20 +143,21 @@ contract AssetExchangeContract is ERC1155Holder {
             "Expiration time should be in the future"
         );
         address receiver = bytesToAddress(fromHex(params.recipient));
-		// The identity of the lock contract is a hash of all the relevant parameters that will uniquely identify the contract
-	    lockContractId = sha256(
-            abi.encodePacked(
-                sender,
-                receiver,
-                assetContract,
-                amount,
-                hashLock,
-                expirationTime
-            )
-        );
+        // The identity of the lock contract is a hash of all the relevant parameters that will uniquely identify the contract
+        if (hashMechanism == HashMechanism.SHA256) {
+            lockContractId = sha256(
+                abi.encodePacked(
+                    sender,
+                    receiver,
+                    assetContract,
+                    amount,
+                    hashLock,
+                    expirationTime
+                )
+            );
+        }
 
-
-		require(
+        require(
             lockContracts[lockContractId].status == UNUSED,
             "An active lock contract already exists with the same parameters"
         );
@@ -129,7 +173,7 @@ contract AssetExchangeContract is ERC1155Holder {
             "ERC20 transferFrom failed from the sender to the lockContract"
         );
 
-	 lockContracts[lockContractId] = LockContract(
+        lockContracts[lockContractId] = LockContract(
             sender,
             receiver,
             assetContract,
@@ -150,7 +194,7 @@ contract AssetExchangeContract is ERC1155Holder {
             expirationTime,
             lockContractId
         );
-	}
+    }
 
     // The receiver claims the ownership of an asset locked for them once they obtain the preimage of the hashlock
     function claimAsset(bytes32 lockContractId, bytes memory lockInfoProtobuf)
@@ -159,13 +203,19 @@ contract AssetExchangeContract is ERC1155Holder {
     {
         LockContract storage c = lockContracts[lockContractId];
         AssetClaimHTLC memory params;
-				(, , params) = AssetClaimHTLCCodec.decode(0, lockInfoProtobuf, uint64(lockInfoProtobuf.length));
-        bytes32 preimage = bytesTobytes32(slice(params.hashPreimageBase64,2,32));
+        (, , params) = AssetClaimHTLCCodec.decode(
+            0,
+            lockInfoProtobuf,
+            uint64(lockInfoProtobuf.length)
+        );
+        bytes32 preimage = bytesTobytes32(
+            slice(params.hashPreimageBase64, 2, 32)
+        );
         // Check the validity of the claim
         require(c.status == LOCKED, "lockContract is not active");
         require(block.timestamp < c.expirationTime, "lockContract has expired");
         bytes32 encryptedPreimage;
-        if(params.hashMechanism == HashMechanism.SHA256){
+        if (params.hashMechanism == HashMechanism.SHA256) {
             encryptedPreimage = sha256(abi.encodePacked(preimage));
         }
         require(
@@ -299,16 +349,12 @@ contract AssetExchangeContract is ERC1155Holder {
         }
         return r;
     }
-    
+
     function slice(
         bytes memory _bytes,
         uint256 _start,
         uint256 _length
-    )
-        internal
-        pure
-        returns (bytes memory)
-    {
+    ) internal pure returns (bytes memory) {
         require(_length + 31 >= _length, "slice_overflow");
         require(_bytes.length >= _start + _length, "slice_outOfBounds");
 
@@ -335,13 +381,22 @@ contract AssetExchangeContract is ERC1155Holder {
                 // because when slicing multiples of 32 bytes (lengthmod == 0)
                 // the following copy loop was copying the origin's length
                 // and then ending prematurely not copying everything it should.
-                let mc := add(add(tempBytes, lengthmod), mul(0x20, iszero(lengthmod)))
+                let mc := add(
+                    add(tempBytes, lengthmod),
+                    mul(0x20, iszero(lengthmod))
+                )
                 let end := add(mc, _length)
 
                 for {
                     // The multiplication in the next line has the same exact purpose
                     // as the one above.
-                    let cc := add(add(add(_bytes, lengthmod), mul(0x20, iszero(lengthmod))), _start)
+                    let cc := add(
+                        add(
+                            add(_bytes, lengthmod),
+                            mul(0x20, iszero(lengthmod))
+                        ),
+                        _start
+                    )
                 } lt(mc, end) {
                     mc := add(mc, 0x20)
                     cc := add(cc, 0x20)

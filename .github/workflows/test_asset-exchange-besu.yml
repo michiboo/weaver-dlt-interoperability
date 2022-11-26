@@ -51,6 +51,13 @@ jobs:
          make deploy-contracts
         working-directory: samples/besu/simpleasset
 
+      # BESU SDK
+      - name: Setup BESU SDK
+        run: |
+         npm link
+         npm install .
+        working-directory: sdks/besu/interoperation-node-sdk 
+
        # BESU CLI
       - name: Setup BESU CLI init
         run: |

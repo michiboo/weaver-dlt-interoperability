@@ -1,6 +1,7 @@
 import { GluegunCommand } from 'gluegun'
 import { getNetworkConfig, commandHelp } from '../../helper/helper'
 import { getContractInstance } from '../../helper/besu-functions'
+import * as assetManager from "@hyperledger-labs/weaver-besu-interop-sdk/src/AssetManager";
 const Web3 = require ("web3")
 
 const command: GluegunCommand = {
@@ -69,14 +70,12 @@ const command: GluegunCommand = {
         }
 
 		const provider = new Web3.providers.HttpProvider('http://'+networkHost+':'+networkPort)
-        const web3N = new Web3(provider)
+        // const web3N = new Web3(provider)
 		const interopContract = await getContractInstance(provider, networkConfig.interopContract)	
-		const accounts = await web3N.eth.getAccounts()
-		var sender = accounts[networkConfig.senderAccountIndex]
+		// const accounts = await web3N.eth.getAccounts()
+		// var sender = accounts[networkConfig.senderAccountIndex]
 
-		var isLocked = await interopContract.isAssetLocked(lockContractId, {
-			from: sender
-		}).catch(function () {
+		var isLocked = await assetManager.isAssetLockedInHTLC(interopContract, lockContractId).catch(function () {
 			console.log("isAssetLocked threw an error");
 		})
 		console.log(`Is there an asset locked in ${lockContractId} in Network ${options.network}: ${isLocked}`) //Todo: Debug. isLocked is not printing correctly.
