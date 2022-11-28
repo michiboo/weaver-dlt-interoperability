@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@hyperledger-labs/weaver-protos-js": "^1.5.2",
+    "@hyperledger-labs/weaver-protos-js": "file:./protos-js",
     "log4js": "^6.7.0",
     "web3": "^1.8.1"
   },

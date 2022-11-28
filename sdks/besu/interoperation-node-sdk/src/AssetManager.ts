@@ -5,7 +5,6 @@
 * This file provides helper functions for interoperability operations.
 **/
 /** End file docs */
-import log4js from "log4js";
 import assetLocksPb from "@hyperledger-labs/weaver-protos-js/common/asset_locks_pb";
 import Web3 from 'web3';
 import crypto from "crypto";
