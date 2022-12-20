@@ -87,7 +87,7 @@ constructor(
             
             // Get AssetStateAndRef
             resolveStateAndRefFlow(getAssetFlowName,
-                listOf(agreement.assettype, agreement.id)
+                listOf(agreement.assetType, agreement.id)
             ).fold({
                 println("Error: Unable to resolve Get Asset StateAndRef Flow.")
                 Left(Error("Error: Unable to resolve Get Asset StateAndRef Flow"))
@@ -96,8 +96,8 @@ constructor(
                 val assetRef = subFlow(it)
                 
                 if (assetRef == null) {
-                    println("Error: Unable to Get Asset StateAndRef for type: ${agreement.assettype} and id: ${agreement.id}.")
-                    Left(Error("Error: Unable to Get Asset StateAndRef for type: ${agreement.assettype} and id: ${agreement.id}."))
+                    println("Error: Unable to Get Asset StateAndRef for type: ${agreement.assetType} and id: ${agreement.id}.")
+                    Left(Error("Error: Unable to Get Asset StateAndRef for type: ${agreement.assetType} and id: ${agreement.id}."))
                 }
                 
                 // Resolve recipient name to party
@@ -178,7 +178,7 @@ constructor(
             
             // Get AssetStateAndRef
             resolveStateAndRefFlow(getAssetFlowName,
-                listOf(agreement.assettype, agreement.numUnits)
+                listOf(agreement.assetType, agreement.numUnits)
             ).fold({
                 println("Error: Unable to resolve Get Asset StateAndRef Flow.")
                 Left(Error("Error: Unable to resolve Get Asset StateAndRef Flow"))
@@ -187,8 +187,8 @@ constructor(
                 val assetRef = subFlow(it)
                 
                 if (assetRef == null) {
-                    println("Error: Unable to Get Asset StateAndRef for type: ${agreement.assettype} and id: ${agreement.numUnits}.")
-                    Left(Error("Error: Unable to Get Asset StateAndRef for type: ${agreement.assettype} and id: ${agreement.numUnits}."))
+                    println("Error: Unable to Get Asset StateAndRef for type: ${agreement.assetType} and id: ${agreement.numUnits}.")
+                    Left(Error("Error: Unable to Get Asset StateAndRef for type: ${agreement.assetType} and id: ${agreement.numUnits}."))
                 }
                 
                 // Resolve recipient name to party

@@ -9,12 +9,12 @@ simpleAppVersion="0.4"
 houseTokenAppVersion="1.0"
 tokenVersion="1.2"
 
-weaverCordaVersion="1.2.9"
-weaverProtosVersion="1.4.2"
+weaverCordaVersion="1.2.10"
+weaverProtosVersion="1.5.3"
 
 parties="Notary PartyA PartyB PartyC"
 
-echo "Starting Netowrk: ${nw}, profile: ${profile}, with App: ${app} Cordapp..."
+echo "Starting Network: ${nw}, profile: ${profile}, with App: ${app} Cordapp..."
 
 for party in ${parties}; do
   if [ "simple" = "$app" ]; then

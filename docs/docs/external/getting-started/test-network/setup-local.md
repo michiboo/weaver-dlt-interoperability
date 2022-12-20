@@ -26,18 +26,18 @@ Before starting, make sure you have the following software installed on your hos
 - Curl: _install using package manager, like `apt` on Debian/Ubuntu Linux_
 - Git: [sample instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Docker: [sample instructions](https://docs.docker.com/engine/install/) (Latest version)
-- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher)
+- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher, but lower than version V2)
 - Golang: [sample instructions](https://golang.org/dl/) (Version 1.16 or higher)
 - Java (JDK and JRE): [sample instructions](https://openjdk.java.net/install/) (Version 8)
-- Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 11 to Version 14 Supported)
+- Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 16 Supported)
 - Yarn: [sample instructions](https://classic.yarnpkg.com/en/docs/install/)
 - Rust: [sample instructions](https://www.rust-lang.org/tools/install)
 - Protoc (Protobuf compiler): _Golang should already be installed and configured._
   * Default method: Run the following with `sudo` if necessary. This will install both the protobuf compiler and the Go code generator plugins.
     ```
     apt-get install protobuf-compiler
-    go get -u google.golang.org/protobuf/cmd/protoc-gen-go
-    go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
+    go install google.golang.org/protobuf/cmd/protoc-gen-go
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
     ```
   * If the above method installs an older version of `protoc` (check using `protoc --version`), say below 3.12.x, you should download pre-compiled binaries instead. (With an older version, you may see errors while attempting to launch and setup the Fabric networks).
     ```
@@ -46,8 +46,8 @@ Before starting, make sure you have the following software installed on your hos
     sudo apt-get install unzip
     unzip protoc-3.15.6-linux-x86_64.zip -d <some-folder-path>
     export PATH="$PATH:<some-folder-path>/bin"
-    go get -u google.golang.org/protobuf/cmd/protoc-gen-go
-    go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
+    go install google.golang.org/protobuf/cmd/protoc-gen-go
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
     ```
     | Notes |
     |:------|
@@ -133,6 +133,10 @@ Follow the instructions below to build and launch the networks:
 - _To launch the networks with a different application chaincode from the above list, run_:
   ```bash
   make start-interop-local CHAINCODE_NAME=<chaincode-name>
+  ```
+- _To launch the networks with 2 organizations, each with a peer (this will enable more variation and experimentation, which you can attempt after testing interoperation protocols across basic network configurations), run_:
+  ```bash
+  make start-interop-local PROFILE="2-nodes"
   ```
 
 | Notes |
@@ -345,6 +349,186 @@ Run a Fabric driver for `network2` as follows (_do this only if you wish to test
 |:------|
 | The variables we specified earlier in the `.env` for `network1` are now passed in the command line. Alternatively, you can make a copy of the `fabric-driver` folder with a different  name and create a separate `.env` file within it that contains links to the connection profile, relay, and driver for `network2`. |
 
+
+### Fabric IIN Agent
+
+IIN Agent is a client of a member of a DLT network or security domain with special permissions to update security domain identities and configurations on the ledger via the network's interoperation module. The code for this lies in the `core/identity-management/iin-agent` folder. Navigate to the `core/identity-management/iin-agent` folder.
+
+#### Building
+
+To build the IIN Agent, run:
+```bash
+make build-local
+```
+
+#### Configuration
+
+Ledger config file specifies ledger specific IIN Agent details such as identity and which network and organization to connect to.
+
+1. To create config file for `Org1MSP`'s Fabric IIN Agent of `network1`, follow the steps:
+    * Create copy of template config file for Fabric IIN Agent: `src/fabric-ledger/config.json.template`, say to location `src/fabric-ledger/config-n1-org1.json`.
+    * Replace `<path-to-connection-profile>` with `<PATH-TO-WEAVER>/tests/network-setups/fabric/shared/network1/peerOrganizations/org1.network1.com/connection-org1.json`, where replace `<PATH-TO-WEAVER>` with the location of your clone of Weaver.
+    * Set `mspId` as `Org1MSP`.
+    * Set `agent.affiliation` as `org1.department1`.
+
+2. To create config file for `Org2MSP`'s Fabric IIN Agent of `network1`, repeat `Step 1` with different name for config file, say `src/fabric-ledger/config-n1-org2.json`, and replace `org1` with `org2` and `Org1MSP` with `Org2MSP`.
+3. To create config file for `Org1MSP`'s Fabric IIN Agent of `network2`, repeat `Step 1` with different name for config file, say `src/fabric-ledger/config-n2-org1.json`, and replace `network1` with `network2`.
+4. To create config file for `Org2MSP`'s Fabric IIN Agent of `network2`, repeat `Step 1` with different name for config file, say `src/fabric-ledger/config-n2-org2.json`, and replace `network1` with `network2`, `org1` with `org2` and `Org1MSP` with `Org2MSP`.
+
+#### Security Domain Configuration
+
+Security Domain config file specifies the scope of security domain, which can be a channel in Fabric networks or list of nodes. File `docker-testnet/configs/security-domain-config.json` can be used for Weaver testnets.
+
+#### DNS Configuration
+
+To allow an IIN Agent's to be able to discover other IIN Agents, a config file for DNS is required. Create one `dnsconfig.json` by creating a copy of template `dnsconfig.json.template`, and replace the values with:
+
+* If Fabric networks are started with 1 org, and IIN Agent are to be started without TLS, use following values:
+```json
+{
+    "network1": {
+        "Org1MSP": {
+            "endpoint": "localhost:9500",
+            "tls": false,
+            "tlsCACertPath": ""
+        }
+    },
+    "network2": {
+        "Org1MSP": {
+            "endpoint": "localhost:9501",
+            "tls": false,
+            "tlsCACertPath": ""
+        }
+    }
+}
+```
+
+* If Fabric networks are started with 1 org, and IIN Agent are to be started with TLS, use following values:
+```json
+{
+    "network1": {
+        "Org1MSP": {
+            "endpoint": "localhost:9500",
+            "tls": true,
+            "tlsCACertPath": "../../relay/credentials/fabric_ca_cert.pem"
+        }
+    },
+    "network2": {
+        "Org1MSP": {
+            "endpoint": "localhost:9501",
+            "tls": true,
+            "tlsCACertPath": "../../relay/credentials/fabric_ca_cert.pem"
+        }
+    }
+}
+```
+
+* If Fabric networks are started with 2 orgs, and IIN Agent are to be started without TLS, use following values:
+```json
+{
+    "network1": {
+        "Org1MSP": {
+            "endpoint": "localhost:9500",
+            "tls": false,
+            "tlsCACertPath": ""
+        },
+        "Org2MSP": {
+            "endpoint": "localhost:9510",
+            "tls": false,
+            "tlsCACertPath": ""
+        }
+    },
+    "network2": {
+        "Org1MSP": {
+            "endpoint": "localhost:9501",
+            "tls": false,
+            "tlsCACertPath": ""
+        },
+        "Org2MSP": {
+            "endpoint": "localhost:9511",
+            "tls": false,
+            "tlsCACertPath": ""
+        }
+    }
+}
+```
+
+* If Fabric networks are started with 2 orgs, and IIN Agent are to be started with TLS, use following values:
+```json
+{
+    "network1": {
+        "Org1MSP": {
+            "endpoint": "localhost:9500",
+            "tls": true,
+            "tlsCACertPath": "../../relay/credentials/fabric_ca_cert.pem"
+        },
+        "Org2MSP": {
+            "endpoint": "localhost:9510",
+            "tls": true,
+            "tlsCACertPath": "../../relay/credentials/fabric_ca_cert.pem"
+        }
+    },
+    "network2": {
+        "Org1MSP": {
+            "endpoint": "localhost:9501",
+            "tls": true,
+            "tlsCACertPath": "../../relay/credentials/fabric_ca_cert.pem"
+        },
+        "Org2MSP": {
+            "endpoint": "localhost:9511",
+            "tls": true,
+            "tlsCACertPath": "../../relay/credentials/fabric_ca_cert.pem"
+        }
+    }
+}
+```
+
+#### Environment Variables
+
+To configure environment variables for `Org1MSP`'s Fabric IIN Agent of `network1`, follow the steps:
+1. Create a copy of `.env.template` as `.env`, and update following values based on previous configuration file paths:
+```
+IIN_AGENT_ENDPOINT=localhost:9500
+MEMBER_ID=Org1MSP
+SECURITY_DOMAIN=network1
+DLT_TYPE=fabric
+CONFIG_PATH=./src/fabric-ledger/config-n1-org1.json
+DNS_CONFIG_PATH=./dnsconfig.json
+SECURITY_DOMAIN_CONFIG_PATH=./docker-testnet/configs/security-domain-config.json
+WEAVER_CONTRACT_ID=interop
+AUTO_SYNC=true
+```
+2. If IIN Agent has to be started with TLS enabled, also update following values:
+```
+IIN_AGENT_TLS=false
+IIN_AGENT_TLS_CERT_PATH=../../relay/credentials/fabric_cert.pem
+IIN_AGENT_TLS_KEY_PATH=../../relay/credentials/fabric_key
+```
+
+#### Deployment
+
+Use the following steps to run Fabric IIN Agents in host machine:
+* To start IIN Agent for `Org1MSP` of `network1`, run:
+```bash
+npm run dev
+```
+* To start IIN Agent for `Org2MSP` of `network1` (_only required if Fabric network was started with 2 orgs_), run:
+```bash
+IIN_AGENT_ENDPOINT=localhost:9510 MEMBER_ID=Org2MSP CONFIG_PATH=./src/fabric-ledger/config-n1-org2.json npm run dev
+```
+* To start IIN Agent for `Org1MSP` of `network2`, run:
+```bash
+IIN_AGENT_ENDPOINT=localhost:9501 SECURITY_DOMAIN=network2 CONFIG_PATH=./src/fabric-ledger/config-n2-org1.json npm run dev
+```
+* To start IIN Agent for `Org2MSP` of `network2` (_only required if Fabric network was started with 2 orgs_), run:
+```bash
+IIN_AGENT_ENDPOINT=localhost:9511 MEMBER_ID=Org2MSP SECURITY_DOMAIN=network2 CONFIG_PATH=./src/fabric-ledger/config-n2-org2.json npm run dev
+```
+
+| Notes |
+|:------|
+| The variables we specified earlier in the `.env` for `network1` are now passed in the command line. Alternatively, you can make a copy of the `fabric-driver` folder with a different  name and create a separate `.env` file within it that contains links to the connection profile, relay, and driver for `network2`. |
+
 ## Corda Components
 
 Using the sequence of instructions below, you can start a Corda network and run an application CorDapp on it. You can also run an interoperation CorDapp, a relay and a _driver_ acting on behalf of the network. You can initialize the network's vault with access control policies, foreign networks' security groups (i.e., membership providers' certificate chains), and some sample state values that can be shared during subsequent interoperation flows.
@@ -359,7 +543,7 @@ Build the interoperation CorDapp as follows:
   ```bash
   make build-local
   ```
-  
+
 ### Corda Interoperation SDK
 
 A client-layer library is defined in the `sdks/corda` folder. This contains functions for Corda based client applications to exercise interoperation capabilities via relays and also several utility/helper functions. The Corda Client tool, which we will use later, depends on this library.
@@ -593,4 +777,3 @@ Bring down the test network's components as follows:
     ```bash
     make clean
     ```
-

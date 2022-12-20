@@ -26,10 +26,10 @@ Before starting, make sure you have the following software installed on your hos
 - Curl: _install using package manager, like `apt` on Debian/Ubuntu Linux_
 - Git: [sample instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Docker: [sample instructions](https://docs.docker.com/engine/install/) (Latest version)
-- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher)
+- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher, but lower than version V2)
 - Golang: [sample instructions](https://golang.org/dl/) (Version 1.16 or higher)
 - Java (JDK and JRE): [sample instructions](https://openjdk.java.net/install/) (Version 8)
-- Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 11 to Version 14 Supported)
+- Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 11 to Version 16 Supported)
 - Yarn: [sample instructions](https://classic.yarnpkg.com/en/docs/install/)
 
 ### Credentials
@@ -81,6 +81,10 @@ Follow the instructions below to build and launch the networks:
 - _To launch the networks with a different application chaincode from the above list, run_:
   ```bash
   make start-interop CHAINCODE_NAME=<chaincode-name>
+  ```
+- _To launch the networks with 2 organizations, each with a peer (this will enable more variation and experimentation, which you can attempt after testing interoperation protocols across basic network configurations), run_:
+  ```bash
+  make start-interop-local PROFILE="2-nodes"
   ```
 
 | Notes |
@@ -155,7 +159,63 @@ Use the following steps to run Fabric drivers in Docker containers:
   ```bash
   make deploy COMPOSE_ARG='--env-file docker-testnet-envs/.env.n2.tls'
   ```
- 
+
+### Fabric IIN Agent
+
+IIN Agent is a client of a member of a DLT network or security domain with special permissions to update security domain identities and configurations on the ledger via the network's interoperation module. The code for this lies in the `core/identity-management/iin-agent` folder. Navigate to the `core/identity-management/iin-agent` folder.
+
+#### Deployment
+
+Use the following steps to run Fabric IIN Agents in Docker containers:
+* The `.env.n1.org1` and `.env.n1.org1.tls` files in the `docker-testnet/envs` directory contain environment variables used by the iin-agent of `org1` of `network1` at startup and runtime. Edit either of these files (depending on whether you wish to start the relay with or without TLS) as follows:
+  - Replace `<PATH-TO-WEAVER>` with the absolute path of the `weaver-dlt-interoperability` clone folder.
+  - If Fabric network was started with 1 org, and IIN Agents are to be started with TLS enabled, update the `DNS_CONFIG_PATH` variable as:
+    ```
+    DNS_CONFIG_PATH=./docker-testnet/configs/dnsconfig-tls.json
+    ```
+  - If Fabric network was started with 2 orgs, and IIN Agents are to be started without TLS, update the `DNS_CONFIG_PATH` variable as
+    ```
+    DNS_CONFIG_PATH=./docker-testnet/configs/dnsconfig-2-nodes.json
+    ```
+  - If Fabric network was started with 2 orgs and IIN Agents are to be started with TLS enabled, update the `DNS_CONFIG_PATH` variable as:
+    ```
+    DNS_CONFIG_PATH=./docker-testnet/configs/dnsconfig-tls-2-nodes.json
+    ```
+* Repeat the above steps for all other environment variable files (depending upon whether tls is enabled) in `docker-testnet/envs` directory.
+* To deploy the Fabric IIN Agent for `org1` of `network1` without TLS, run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n1.org1'
+  ```
+  Instead, to deploy the IIN Agent with TLS, run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n1.org1.tls'
+  ```
+* To deploy the Fabric IIN Agent for `org2` of `network1` without TLS (_only required if Fabric network was started with 2 orgs_), run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n1.org2'
+  ```
+  Instead, to deploy the IIN Agent with TLS, run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n1.org2.tls'
+  ```
+* To deploy the Fabric IIN Agent for `org1` of `network2` without TLS, run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n2.org1'
+  ```
+  Instead, to deploy the IIN Agent with TLS, run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n2.org1.tls'
+  ```
+* To deploy the Fabric IIN Agent for `org2` of `network2` without TLS (_only required if Fabric network was started with 2 orgs_), run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n2.org2'
+  ```
+  Instead, to deploy the IIN Agent with TLS, run:
+  ```bash
+  make deploy COMPOSE_ARG='--env-file docker-testnet/envs/.env.n2.org2.tls'
+  ```
+
+
 ### Fabric Client (Application)
 
 The CLI is used to interact with a Fabric network, configure it and run chaincode transactions to record data on the channel ledger or query data. It is also used to interact with remote networks through the relay in order to trigger an interoperation flow for data request and acceptance.

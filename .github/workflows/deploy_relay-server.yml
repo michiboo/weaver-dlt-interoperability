@@ -1,3 +1,7 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: CC-BY-4.0
+
 name: Deploy Relay Docker Image
 
 on:
@@ -5,7 +9,7 @@ on:
     branches:
       - main
     paths:
-      - 'core/relay/Makefile.variables.docker'
+      - 'core/relay/VERSION'
       
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -25,10 +29,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
+      - name: Check if package already exists
+        run: (make check-if-tag-exists && echo "RELAY_PUSH=true" >> $GITHUB_ENV) || echo "RELAY_PUSH=false" >> $GITHUB_ENV
+        working-directory: core/relay
+          
       - name: Build and Push
+        if: ${{ env.RELAY_PUSH == 'true' }}
         run: make push-server
         working-directory: core/relay
         
       - name: Push latest tag
-        run: make push-server-latest
+        if: ${{ env.RELAY_PUSH == 'true' }}
+        run: (cat out | grep "exists") || make push-server-latest
         working-directory: core/relay
